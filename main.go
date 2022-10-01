@@ -32,6 +32,13 @@ func main() {
 	clientset := connectToK8s(*kubeConfig)
 	launchK8sJob(clientset, jobName, containerImage, entryCommand)
 	log.Println("job successfully created")
+
+	log.Println("List Jobs in all namespace")
+	listJobs(clientset)
+
+	namespace := "argocd"
+	log.Printf("List pods in %q namespace", namespace)
+	listPods(clientset, namespace)
 }
 
 func connectToK8s(kubeConfig string) *kubernetes.Clientset {
@@ -106,4 +113,35 @@ func launchK8sJob(clientset *kubernetes.Clientset, jobName, image, cmd *string) 
 	}
 
 	log.Println(string(yaml))
+}
+
+func listJobs(clientset *kubernetes.Clientset) {
+	jobs := clientset.BatchV1().Jobs("")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	jobList, err := jobs.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Println("can not list jobs")
+	}
+	cancel()
+
+	for _, job := range jobList.Items {
+		log.Printf("Name: %s\tNamespace: %s\n", job.Name, job.Namespace)
+	}
+}
+
+func listPods(clientset *kubernetes.Clientset, namespace string) {
+	pods := clientset.CoreV1().Pods(namespace)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	podList, err := pods.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Println("can not list pods")
+	}
+	cancel()
+
+	for _, pod := range podList.Items {
+		log.Printf("Name: %s\tNamespace: %s\n", pod.Name, pod.Namespace)
+	}
+
 }
